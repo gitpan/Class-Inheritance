@@ -49,7 +49,6 @@ TERMS AND OPTIONS
          to "package" if defined. 
       3. "package" contains the class you are looking for. Most of the 
           time you do not need to specify this. Defaults to "class".  
-      4. "debug" turns off and on debug or sets the level of the debug. 
 
         Options for the object. 
 
@@ -60,13 +59,12 @@ TERMS AND OPTIONS
 METHODS
   source
        Returns the name of the class which this method came from. Only 
-       searches a loaded classes.
+       searches loaded classes.
 
   tree
       This returns the inheritance tree for a class. Only searches
-      a loaded classes.
+      loaded classes.
 
-  sources
       Returns all the classes in the inheritance tree of a classes has
       this method defined. This does not include classes which inherited
       the method. Only searches loaded classes.
@@ -76,10 +74,12 @@ METHODS
       searches loaded classes. 
 
   subclasses
-      Returns all the subclasses defined (so far) for a class. 
+      Returns all the loaded subclasses for a class. 
 
   source_all
       Returns all the sources for a method from the loaded classes. 
+      This will search all loaded classes. Any class that has this
+      method defined (not inherited) should be in this list. 
 
   trees_all
       Returns all the trees of classes which contain a method. Only 

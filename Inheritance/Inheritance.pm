@@ -242,17 +242,20 @@ sub sources {
      my $previous_code = "";
 
 	 ### Record my class if I actually have the function.
-     my $temp_obj = new $class;
+         ### We should make a subroutine for this. 
+     eval {
+	 my $temp_obj = new $class;
 	 ### Can I execute this function?
-     my $ref_type = ref($temp_obj->can($method));
-       ## Does it return a code ref which points to the code?
-       ## It yes, then record.
-     if ($ref_type eq "CODE") {
-	 my $code1 = $temp_obj->can($method);
-	 my $string1 = "$code1";
-	 $previous_code = $string1;
-	 push(@$method_name, $class); 
-     }
+	 my $ref_type = ref($temp_obj->can($method));
+	 ## Does it return a code ref which points to the code?
+	 ## It yes, then record.
+	 if ($ref_type eq "CODE") {
+	     my $code1 = $temp_obj->can($method);
+	     my $string1 = "$code1";
+	     $previous_code = $string1;
+	     push(@$method_name, $class); 
+	 }
+     };
 
      for my $class (@items) {
 	   ## Dangerous thing which could bomb us. Eval it later.
@@ -274,6 +277,7 @@ sub sources {
 
 	    ## If the function exists, if the class can execute ths function,
 	    ## and the return value is CODE
+            ## Remember to make a subroutine to eval creating a new object.
 	 if (grep($_ eq $method, keys %{"main::$class\::"}))  {
 	     my $temp_obj = new $class;
 	       ## If the reference eq CODE?
@@ -507,6 +511,7 @@ sub source_all {
 			 $Sources->{$class} = {};
 			 my $temp = $temp_obj->can($method);
 			 $Sources->{$class}->{'code'} = "$temp";
+#                         print "test $class $method $temp @$sources\n";  
 		     }
 		 }
 	     };
@@ -520,6 +525,7 @@ sub source_all {
      elsif ($return_type eq 'list') {
 	 my $Array = [];
 	 foreach my $Key (sort keys %$Sources) {push(@$Array, $Key);}
+#         print "test", Dumper($Array);
 	 return($Array);
      }
 
@@ -615,7 +621,6 @@ sub trees_all {
          return($string);
      }
 
-
      return($trees);
  }
 
@@ -636,8 +641,8 @@ sub function_in_isa {
        ### Get all the sources for this method.
      my $sources = $self->source_all('method'=>$method,'return_type'=>'list', 'first_call'=>0);
 
-     if ($self->{'debug'} > 1) { print "function_in_isa trees: @$tree\n";}
-     if ($self->{'debug'} > 1) { print "function_in_isa sources: @$sources\n";}
+     if ($self->{'debug'} > 1) { print "function_in_isa '$method' trees: @$tree\n";}
+     if ($self->{'debug'} > 1) { print "function_in_isa '$method' sources: @$sources\n";}
 
       ### Grep to see if any of these sources exists in my tree.
       ## This is a very complicated grep. 
@@ -645,14 +650,23 @@ sub function_in_isa {
       ## Notice how there are two different $_ in the one-liner. 
       ## If you don't know what you are doing, this grep can be bad. 
      my $temp = "";
+#     print "test1: $class, $method, @$sources, @$tree\n";
+
      if (grep((($temp = $_) || (1)) && (grep($_ eq $temp, @$sources)), @$tree)) 
        {return (1);}
 
        ### However, if we don't inherit, check to see if we actually have
        ### the function. 
-     my (@keys) = keys %{"main::$class\::"};
-     if (grep($_ eq $method, @keys)) {  return(1); }
-
+     my $ref_type = '';
+     my (@keys) = sort keys %{"main::$class\::"};
+     if (grep($_ eq $method, @keys)) {  
+	 eval {
+	     my $temp_obj = new $class;
+	     $ref_type = ref($temp_obj->can($method));
+	 };
+	 if ($ref_type eq "CODE") {  return(1); }
+     }
+ 
     return(0);
 }
 
@@ -783,7 +797,6 @@ Class::Inheritance - get and set inheritance values for a class.
      to "package" if defined. 
   3. "package" contains the class you are looking for. Most of the 
       time you do not need to specify this. Defaults to "class".  
-  4. "debug" turns off and on debug or sets the level of the debug. 
 
     Options for the object. 
 
@@ -797,14 +810,14 @@ Class::Inheritance - get and set inheritance values for a class.
 =head2 source
 
    Returns the name of the class which this method came from. Only 
-   searches a loaded classes.
+   searches loaded classes.
 
 =head2 tree
 
   This returns the inheritance tree for a class. Only searches
-  a loaded classes.
+  loaded classes.
 
-=head2 sources
+=head sources
 
   Returns all the classes in the inheritance tree of a classes has
   this method defined. This does not include classes which inherited
@@ -817,11 +830,13 @@ Class::Inheritance - get and set inheritance values for a class.
 
 =head2 subclasses
 
-  Returns all the subclasses defined (so far) for a class. 
+  Returns all the loaded subclasses for a class. 
 
 =head2 source_all
 
   Returns all the sources for a method from the loaded classes. 
+  This will search all loaded classes. Any class that has this
+  method defined (not inherited) should be in this list. 
 
 =head2 trees_all
 
